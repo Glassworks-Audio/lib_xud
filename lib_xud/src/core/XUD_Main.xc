@@ -393,7 +393,10 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
                     /* Reset in the ep structures */
                     for(int i = 0; i< noEpIn; i++)
                     {
-                        ep_info[USB_MAX_NUM_EP_OUT+i].pid = USB_PIDn_DATA0;
+                        if(ep_info[USB_MAX_NUM_EP_OUT+i].epType != XUD_EPTYPE_ISO)
+                        {
+                            ep_info[USB_MAX_NUM_EP_OUT+i].pid = USB_PIDn_DATA0;
+                        }
                     }
 
                     /* Set default device address - note, for normal operation this is 0, but can be other values for testing */
@@ -465,6 +468,17 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
             {
                 set_thread_fast_mode_off();
             }
+            // Reset ep->saved_frame to 0 to allow sof counting to resume after suspend
+            for(int i = 0; i< noEpOut; i++)
+            {
+                ep_info[i].saved_frame = 0;
+            }
+
+            /* Reset in the ep structures */
+            for(int i = 0; i< noEpIn; i++)
+            {
+                ep_info[USB_MAX_NUM_EP_OUT+i].saved_frame = 0;
+            }
 
             if(!noExit)
                 break;
@@ -521,6 +535,7 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
         epAddr_Ready[i+USB_MAX_NUM_EP] = 0; //epAddr_Ready_Setup
         ep_info[i].epAddress = i;
         ep_info[i].busUpdate = 0;
+        ep_info[i].tr = 0;
 
         /* Mark all EP's as halted, we might later clear this if the EP is in use */
         ep_info[i].halted = USB_PIDn_STALL;
@@ -537,6 +552,7 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
         ep_info[USB_MAX_NUM_EP_OUT+i].epAddress = (i | 0x80);
         ep_info[USB_MAX_NUM_EP_OUT+i].busUpdate = 0;
         ep_info[USB_MAX_NUM_EP_OUT+i].halted = USB_PIDn_STALL;
+        ep_info[USB_MAX_NUM_EP_OUT+i].tr = 0;
 
         asm("ldaw %0, %1[%2]":"=r"(x):"r"(ep_info),"r"((USB_MAX_NUM_EP_OUT+i)*sizeof(XUD_ep_info)/sizeof(unsigned)));
         epAddr[USB_MAX_NUM_EP_OUT+i] = x;
