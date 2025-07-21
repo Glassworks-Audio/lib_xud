@@ -5,7 +5,7 @@
 def clone_test_deps() {
   dir("${WORKSPACE}") {
     sh "git clone git@github.com:xmos/test_support"
-    sh "git -C test_support checkout c820ebe67bea0596dabcdaf71a590c671385ac35"
+    sh "git -C test_support checkout 9a3c8b8c8fdfa82c90a24e7abf3b4430ac506238"
   }
 }
 
@@ -13,7 +13,7 @@ getApproval()
 
 pipeline {
   agent {
-    label 'x86_64 && linux'
+    label 'x86_64 && linux && documentation'
   }
   options {
     buildDiscarder(xmosDiscardBuildSettings())
@@ -31,7 +31,7 @@ pipeline {
     )
     string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v7.0.0',
+      defaultValue: 'v7.3.0',
       description: 'The xmosdoc version'
     )
     string(

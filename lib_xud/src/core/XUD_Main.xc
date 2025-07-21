@@ -27,6 +27,19 @@
 #error USB_MAX_NUM_EP_OUT must be 16!
 #endif
 
+#if !((XUD_USB_ISO_MAX_TXNS_PER_MICROFRAME == 1) || \
+     ((XUD_USB_ISO_MAX_TXNS_PER_MICROFRAME == 2) && defined(__XS3A__)))
+#error "XUD_USB_ISO_MAX_TXNS_PER_MICROFRAME must be 1 or 2 (2 only valid on XS3A)"
+#endif
+
+#if ((XUD_USB_ISO_EP_MAX_TXN_SIZE) > 1024)
+#error "XUD_USB_ISO_EP_MAX_TXN_SIZE must not exceed 1024"
+#endif
+
+#if ((XUD_USB_ISO_EP_MAX_TXN_SIZE) % 4)
+#error "XUD_USB_ISO_EP_MAX_TXN_SIZE must be a multiple of 4"
+#endif
+
 void XUD_UserSuspend();
 void XUD_UserResume();
 void XUD_PhyReset_User();
@@ -391,10 +404,20 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
                     }
 
                     /* Reset in the ep structures */
+#if (XUD_USB_ISO_MAX_TXNS_PER_MICROFRAME > 1)
+                    for(int i = 0; i< noEpIn; i++)
+                    {
+                        if(ep_info[USB_MAX_NUM_EP_OUT+i].epType != XUD_EPTYPE_ISO)
+                        {
+                            ep_info[USB_MAX_NUM_EP_OUT+i].pid = USB_PIDn_DATA0;
+                        }
+                    }
+#else
                     for(int i = 0; i< noEpIn; i++)
                     {
                         ep_info[USB_MAX_NUM_EP_OUT+i].pid = USB_PIDn_DATA0;
                     }
+#endif
 
                     /* Set default device address - note, for normal operation this is 0, but can be other values for testing */
                     XUD_HAL_SetDeviceAddress(XUD_STARTUP_ADDRESS);
@@ -465,6 +488,17 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
             {
                 set_thread_fast_mode_off();
             }
+            // Reset ep->saved_frame to 0 to allow sof counting to resume after suspend
+            for(int i = 0; i< noEpOut; i++)
+            {
+                ep_info[i].saved_frame = 0;
+            }
+
+            /* Reset in the ep structures */
+            for(int i = 0; i< noEpIn; i++)
+            {
+                ep_info[USB_MAX_NUM_EP_OUT+i].saved_frame = 0;
+            }
 
             if(!noExit)
                 break;
@@ -521,6 +555,7 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
         epAddr_Ready[i+USB_MAX_NUM_EP] = 0; //epAddr_Ready_Setup
         ep_info[i].epAddress = i;
         ep_info[i].busUpdate = 0;
+        ep_info[i].current_transaction = 0;
 
         /* Mark all EP's as halted, we might later clear this if the EP is in use */
         ep_info[i].halted = USB_PIDn_STALL;
@@ -537,6 +572,7 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
         ep_info[USB_MAX_NUM_EP_OUT+i].epAddress = (i | 0x80);
         ep_info[USB_MAX_NUM_EP_OUT+i].busUpdate = 0;
         ep_info[USB_MAX_NUM_EP_OUT+i].halted = USB_PIDn_STALL;
+        ep_info[USB_MAX_NUM_EP_OUT+i].current_transaction = 0;
 
         asm("ldaw %0, %1[%2]":"=r"(x):"r"(ep_info),"r"((USB_MAX_NUM_EP_OUT+i)*sizeof(XUD_ep_info)/sizeof(unsigned)));
         epAddr[USB_MAX_NUM_EP_OUT+i] = x;
@@ -569,7 +605,10 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
 
             ep_info[i].epType = epTypeTableOut[i];
             ep_info[i].halted = USB_PIDn_NAK;      // Mark EP as not halted
-
+            ep_info[i].remained = 0;
+            ep_info[i].saved_frame = 0;
+            ep_info[i].max_len = XUD_USB_ISO_EP_MAX_TXN_SIZE;
+            ep_info[i].out_err_flag = 0;
 #if !defined(__XS2A__)
             ep_info[i].pid = USB_PIDn_DATA0;
 #else
@@ -604,7 +643,14 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
 
             ep_info[USB_MAX_NUM_EP_OUT+i].epType = epTypeTableIn[i];
 
+            ep_info[USB_MAX_NUM_EP_OUT+i].max_len = XUD_USB_ISO_EP_MAX_TXN_SIZE;
+
             ep_info[USB_MAX_NUM_EP_OUT+i].halted = 0;    // Mark EP as not halted
+
+            ep_info[USB_MAX_NUM_EP_OUT+i].remained = 0;
+            ep_info[i].num_transactions = 1;
+            ep_info[USB_MAX_NUM_EP_OUT+i].saved_frame = 0;
+            ep_info[USB_MAX_NUM_EP_OUT+i].out_err_flag = 0;
 
             asm("ldaw %0, %1[%2]":"=r"(x):"r"(ep_info),"r"((USB_MAX_NUM_EP_OUT+i)*sizeof(XUD_ep_info)/sizeof(unsigned)));
             outuint(c_ep_in[i], x);

@@ -41,7 +41,7 @@ suspend_t_wtwrsths:
 #define STACK_OUT_TIMER (9)                 // Used for out data timeout
 #define STACK_RXA_PORT (10)                 // RXA_port
 // 11                : Unused
-// 12                : Unused
+#define STACK_SOF_FRAME         (12)
 #define STACK_SUSPEND_TIMEOUT   (13)
 #define STACK_SUSPEND_TIMER     (14)
 #define STACK_RXE_PORT          (15)
@@ -279,6 +279,9 @@ ConfigRxErrEventVector:
     ldc        r11, 1
     setd       res[r3], r11                 // Set event cond data to 1
     eeu        res[r3]
+
+    ldc        r11, 0
+    stw        r11, sp[STACK_SOF_FRAME]
 
 SetupSuspendResetTimer:
     getr       r10, XS1_RES_TYPE_TIMER

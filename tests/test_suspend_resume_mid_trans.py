@@ -64,6 +64,9 @@ def test_session(ep, address, bus_speed):
         )
     )
 
+    frameNumber = frameNumber + 1
+    session.add_event(CreateSofToken(frameNumber))
+
     # Also check Iso EP
     session.add_event(
         UsbTransaction(

@@ -20,6 +20,38 @@
 #include "xud_conf.h"
 #endif
 
+#ifndef XUD_USB_ISO_EP_MAX_TXN_SIZE
+/**
+ * @brief Max data payload per ISO transaction (in bytes).
+ *
+ * Must not exceed 1024, per USB 2.0 spec limit for high-speed isochronous transfers.
+ *
+ * Default: 1024
+ *
+ * Applications can include a custom xud_conf.h file to override this value.
+ */
+#define XUD_USB_ISO_EP_MAX_TXN_SIZE     (1024)
+#endif
+
+
+#ifndef XUD_USB_ISO_MAX_TXNS_PER_MICROFRAME
+/**
+ * @brief Maximum number of transactions per microframe for an ISO endpoint.
+ *
+ * Defines how many transactions an isochronous (ISO) endpoint can perform in a single
+ * USB microframe. This value controls whether high-bandwidth ISO support is enabled.
+ *
+ * - Default: 1
+ * - Maximum supported value: 2
+ *
+ * Applications can include a custom xud_conf.h file to override this value.
+ *
+ * Setting this to a value greater than 1 enables ISO High Bandwidth support
+ * in lib_xud.
+ */
+#define XUD_USB_ISO_MAX_TXNS_PER_MICROFRAME     (1)
+#endif
+
 #ifndef XUD_STARTUP_ADDRESS
 #define XUD_STARTUP_ADDRESS (0)
 #endif
@@ -122,6 +154,7 @@ typedef enum XUD_Result
     XUD_RES_UPDATE = -1,
     XUD_RES_OKAY = 0,
     XUD_RES_ERR =  2,
+    XUD_RES_WAIT = 3    /* Used for notifying the client that an IN or OUT transfer is still in progress */
 } XUD_Result_t;
 
 /* Note, also used at CT to inform EPs of bus-state change type */
@@ -399,27 +432,7 @@ void XUD_Kill(XUD_ep ep);
  *                         The buffer is assumed to be word aligned.
  * \return     XUD_RES_OKAY on success, for errors see `Status Reporting`.
  */
-#if (XUD_WEAK_API)
-XUD_Result_t XUD_SetReady_OutPtr(XUD_ep ep, unsigned addr);
-#else
-static inline XUD_Result_t XUD_SetReady_OutPtr(XUD_ep ep, unsigned addr)
-{
-    int chan_array_ptr;
-    int reset;
-
-    /* Firstly check if we have missed a USB reset - endpoint may would not want receive after a reset */
-    asm volatile("ldw %0, %1[9]":"=r"(reset):"r"(ep));
-    if(reset)
-    {
-        return XUD_RES_UPDATE;
-    }
-    asm volatile("ldw %0, %1[0]":"=r"(chan_array_ptr):"r"(ep));
-    asm volatile("stw %0, %1[3]"::"r"(addr),"r"(ep));            // Store buffer
-    asm volatile("stw %0, %1[0]"::"r"(ep),"r"(chan_array_ptr));
-
-    return XUD_RES_OKAY;
-}
-#endif
+XUD_Result_t XUD_SetReady_OutPtr(XUD_ep ep, unsigned addr) ATTRIB_WEAK;
 
 /**
  * \brief      Marks an OUT endpoint as ready to receive data
@@ -438,64 +451,7 @@ int XUD_SetReady_Out(XUD_ep ep, unsigned char buffer[]) ATTRIB_WEAK;
  * \param      len         The length of the data to transmit.
  * \return     XUD_RES_OKAY on success, for errors see `Status Reporting`.
  */
-#if (XUD_WEAK_API)
-XUD_Result_t XUD_SetReady_InPtr(XUD_ep ep, unsigned addr, int len);
-#else
-static inline XUD_Result_t XUD_SetReady_InPtr(XUD_ep ep, unsigned addr, int len)
-{
-    int chan_array_ptr;
-    int tmp, tmp2;
-    int wordLength;
-    int tailLength;
-
-    int reset;
-
-    /* Firstly check if we have missed a USB reset - endpoint may not want to send out old data after a reset */
-    asm volatile("ldw %0, %1[9]":"=r"(reset):"r"(ep));
-    if(reset)
-    {
-        return XUD_RES_UPDATE;
-    }
-
-    /* Tail length bytes to bits */
-#ifdef __XC__
-    tailLength = zext((len << 3),5);
-#else
-    tailLength = (len << 3) & 0x1F;
-#endif
-
-    /* Datalength (bytes) --> datalength (words) */
-    wordLength = len >> 2;
-
-    /* If tail-length is 0 and word-length not 0. Make tail-length 32 and word-length-- */
-    if ((tailLength == 0) && (wordLength != 0))
-    {
-        wordLength = wordLength - 1;
-        tailLength = 32;
-    }
-
-    /* Get end off buffer address */
-    asm volatile("add %0, %1, %2":"=r"(tmp):"r"(addr),"r"(wordLength << 2));
-
-    /* Produce negative offset from end of buffer */
-    asm volatile("neg %0, %1":"=r"(tmp2):"r"(wordLength));
-
-    /* Store neg index */
-    asm volatile("stw %0, %1[6]"::"r"(tmp2),"r"(ep));
-
-    /* Store buffer pointer */
-    asm volatile("stw %0, %1[3]"::"r"(tmp),"r"(ep));
-
-    /*  Store tail len */
-    asm volatile("stw %0, %1[7]"::"r"(tailLength),"r"(ep));
-
-    /* Finally, mark ready */
-    asm volatile("ldw %0, %1[0]":"=r"(chan_array_ptr):"r"(ep));
-    asm volatile("stw %0, %1[0]"::"r"(ep),"r"(chan_array_ptr));
-
-    return XUD_RES_OKAY;
-}
-#endif
+XUD_Result_t XUD_SetReady_InPtr(XUD_ep ep, unsigned addr, int len) ATTRIB_WEAK;
 
 /**
  * \brief   Marks an IN endpoint as ready to transmit data
@@ -505,14 +461,7 @@ static inline XUD_Result_t XUD_SetReady_InPtr(XUD_ep ep, unsigned addr, int len)
  * \param   len         The length of the data to transmit.
  * \return  XUD_RES_OKAY on success, for errors see `Status Reporting`.
  */
-static inline XUD_Result_t XUD_SetReady_In(XUD_ep ep, unsigned char buffer[], int len)
-{
-    unsigned addr;
-
-    asm volatile("mov %0, %1":"=r"(addr):"r"(buffer));
-
-    return XUD_SetReady_InPtr(ep, addr, len);
-}
+XUD_Result_t XUD_SetReady_In(XUD_ep ep, unsigned char buffer[], int len);
 
 /**
  * \brief   Select handler function for receiving OUT endpoint data in a select.
@@ -575,9 +524,6 @@ void XUD_SetData_Select(chanend c, XUD_ep ep, REFERENCE_PARAM(XUD_Result_t, resu
 #define XUD_THREAD_MODE_FAST_EN     (1)
 #endif
 
-/*
- * TODO size of this hardcoded in ResetEpStateByAddr_
- */
 typedef struct XUD_ep_info
 {
     unsigned int array_ptr;            // 0
@@ -593,6 +539,14 @@ typedef struct XUD_ep_info
     unsigned int halted;               // 10 NAK or STALL
     unsigned int saved_array_ptr;      // 11
     unsigned int array_ptr_setup;      // 12
+    unsigned int saved_frame;          // 13 Cached micro-frame number
+    unsigned int max_len;              // 14 Maximum transaction len permitted per endpoint
+    unsigned int current_transaction;  // 15 index of the current transaction
+    unsigned int remained;             // 16 For IN, datalength in bytes remaining to be sent. For OUT, datalength received so far in the current transfer
+    unsigned int num_transactions;     // 17 Number of transactions in the current IN transfer. Unused for OUT
+    unsigned int save_buffer;          // 18 copy of the buffer start address. Used to retry an IN transfer, or to discard an OUT transfer mid-way and roll back the buffer start address
+    unsigned int save_length;          // 19 copy of the transfer length. Used to retry an IN transfer. Unused for OUT
+    unsigned int out_err_flag;         // 20 flag indicating if the OUT EP is in error
 } XUD_ep_info;
 
 #endif

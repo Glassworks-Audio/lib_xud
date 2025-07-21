@@ -1,6 +1,11 @@
 lib_xud change log
 ==================
 
+UNRELEASED
+----------
+
+  * Added support for high bandwidth ISO endpoints
+
 3.0.1
 -----
 

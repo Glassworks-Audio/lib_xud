@@ -63,11 +63,11 @@ void TerminateFail(int failReason)
             printintln(failReason);
             break;
     }
-    exit(failReason);
+    _Exit(failReason);
 }
 void TerminatePass(int x)
 {
-    exit(0);
+    _Exit(0);
 }
 #endif
 
@@ -93,10 +93,8 @@ XUD_Result_t SendTxPacket(XUD_ep ep, int length, int epNum)
 }
 
 #pragma unsafe arrays
-int TestEp_Tx(chanend c_in, int epNum1, unsigned start, unsigned end, t_runMode runMode)
+static inline void TestEp_Tx_RunData(XUD_ep ep_in, unsigned start, unsigned end)
 {
-    XUD_ep ep_in  = XUD_InitEp(c_in);
-
     unsigned char buffer[MAX_PKT_COUNT][1024];
 
     int counter = 0;
@@ -120,6 +118,14 @@ int TestEp_Tx(chanend c_in, int epNum1, unsigned start, unsigned end, t_runMode 
     {
         XUD_SetBuffer(ep_in, buffer[i], length++);
     }
+}
+
+#pragma unsafe arrays
+int TestEp_Tx(chanend c_in, int epNum1, unsigned start, unsigned end, t_runMode runMode)
+{
+    XUD_ep ep_in  = XUD_InitEp(c_in);
+
+    TestEp_Tx_RunData(ep_in, start, end);
 
     /* Allow a little time for Tx data to make it's way of the port - important for FS tests */
     {
@@ -128,6 +134,23 @@ int TestEp_Tx(chanend c_in, int epNum1, unsigned start, unsigned end, t_runMode 
         t :> time;
         t when timerafter(time + 500) :> int _;
     }
+
+    if(runMode == RUNMODE_DIE)
+        return 0;
+    else
+        while(1);
+}
+
+#pragma unsafe arrays
+int TestEp_Tx_Hbw(chanend c_in, int epNum1, unsigned start, unsigned end, unsigned ep_len, t_runMode runMode)
+{
+    XUD_ep ep_in  = XUD_InitEp(c_in);
+    unsafe {
+        XUD_ep_info * ep = (XUD_ep_info*) ep_in;
+        ep->max_len = ep_len;
+    }
+
+    TestEp_Tx_RunData(ep_in, start, end);
 
     if(runMode == RUNMODE_DIE)
         return 0;
@@ -178,11 +201,9 @@ int RxDataCheck(unsigned char b[], int l, int epNum, unsigned expectedLength)
 }
 
 #pragma unsafe arrays
-int TestEp_Rx(chanend c_out, int epNum, int start, int end)
+int TestEp_Rx_RunData(XUD_ep ep_out1, int epNum, int start, int end)
 {
     unsigned int length[MAX_PKT_COUNT];
-
-    XUD_ep ep_out1 = XUD_InitEp(c_out);
 
     /* Buffer for Setup data */
     unsigned char buffer[MAX_PKT_COUNT][1024];
@@ -209,6 +230,26 @@ int TestEp_Rx(chanend c_out, int epNum, int start, int end)
     }
 
     return 0;
+}
+
+#pragma unsafe arrays
+int TestEp_Rx(chanend c_out, int epNum, int start, int end)
+{
+    XUD_ep ep_out1 = XUD_InitEp(c_out);
+
+    return TestEp_Rx_RunData(ep_out1, epNum, start, end);
+}
+
+#pragma unsafe arrays
+int TestEp_Rx_Hbw(chanend c_out, int epNum, int start, int end, int ep_len)
+{
+    XUD_ep ep_out1 = XUD_InitEp(c_out);
+    unsafe {
+        XUD_ep_info * ep = (XUD_ep_info*) ep_out1;
+        ep->max_len = ep_len;
+    }
+
+    return TestEp_Rx_RunData(ep_out1, epNum, start, end);
 }
 
 /* Loopback packets forever */

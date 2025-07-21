@@ -1,5 +1,5 @@
 # The APP_NAME variable determines the name of the final .xe file. It should
-# not include the .xe postfix. If left blank the name will default to 
+# not include the .xe postfix. If left blank the name will default to
 # the project name
 
 APP_NAME =
@@ -27,29 +27,13 @@ COMMON_FLAGS = -DDEBUG_PRINT_ENABLE \
 
 TEST_FLAGS ?=
 
-ifndef TEST_ARCH
-$(error TEST_ARCH is not set)
-endif
-
-ifndef TEST_FREQ
-$(error TEST_FREQ is not set)
-endif
-
-ifndef TEST_DTHREADS
-$(error TEST_DTHREADS is not set)
-endif
-
-ifndef TEST_EP_NUM
-$(error TEST_EP_NUM is not set)
-endif
-
-ifndef TEST_ADDRESS
-$(error TEST_ADDRESS is not set)
-endif
-
-ifndef TEST_BUS_SPEED
-$(error TEST_BUS_SPEED is not set)
-endif
+TEST_ARCH ?= xs3
+TEST_FREQ ?= 600
+TEST_DTHREADS ?= 5
+TEST_EP_NUM ?= 1
+TEST_ADDRESS ?= 1
+TEST_BUS_SPEED ?= HS
+TEST_HBW_EP ?= hbw_off
 
 ifeq ($(TEST_BUS_SPEED), FS)
 TEST_BUS_SPEED_INT = 1
@@ -57,24 +41,31 @@ else
 TEST_BUS_SPEED_INT = 2
 endif
 
-SOURCE_DIRS = ./src ../shared/src
+ifeq ($(TEST_HBW_EP), hbw_on)
+ISO_MAX_TXNS = 2
+else
+ISO_MAX_TXNS = 1
+endif
+
+SOURCE_DIRS = ./src
 
 
-XCC_FLAGS_$(TEST_ARCH)_$(TEST_FREQ)_$(TEST_DTHREADS)_$(TEST_EP_NUM)_$(TEST_ADDRESS)_$(TEST_BUS_SPEED) = $(TEST_FLAGS) $(COMMON_FLAGS) \
+XCC_FLAGS_$(TEST_ARCH)_$(TEST_FREQ)_$(TEST_DTHREADS)_$(TEST_EP_NUM)_$(TEST_ADDRESS)_$(TEST_BUS_SPEED)_$(TEST_HBW_EP) = $(TEST_FLAGS) $(COMMON_FLAGS) \
 	-DXUD_TEST_SPEED=$(TEST_BUS_SPEED_INT) \
 	-DXUD_STARTUP_ADDRESS=$(TEST_ADDRESS) \
 	-DTEST_DTHREADS=$(TEST_DTHREADS) \
 	-DTEST_EP_NUM=$(TEST_EP_NUM) \
-	-DXUD_CORE_CLOCK=$(TEST_FREQ)
+	-DXUD_CORE_CLOCK=$(TEST_FREQ) \
+	-DXUD_USB_ISO_MAX_TXNS_PER_MICROFRAME=$(ISO_MAX_TXNS)
 
-# The TARGET variable determines what target system the application is 
+# The TARGET variable determines what target system the application is
 # compiled for. It either refers to an XN file in the source directories
 # or a valid argument for the --target option when compiling.
 
 TARGET = test_$(TEST_ARCH)_$(TEST_FREQ).xn
 
 # The USED_MODULES variable lists other module used by the application.
-USED_MODULES = lib_xud 
+USED_MODULES = lib_xud
 
 
 #=============================================================================

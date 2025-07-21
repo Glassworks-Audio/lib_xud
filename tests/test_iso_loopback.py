@@ -5,22 +5,29 @@ import pytest
 from conftest import PARAMS, test_RunUsbSession  # noqa F401
 from usb_session import UsbSession
 from usb_transaction import UsbTransaction
+from usb_packet import CreateSofToken
 
 
 @pytest.fixture
-def test_session(ep, address, bus_speed):
+def test_session(ep, address, bus_speed, hbw_support):
 
     ep_loopback = ep
     ep_loopback_kill = ep + 1
 
     start_length = 200
     end_length = 203
+
+    frameNumber = 0
     session = UsbSession(
         bus_speed=bus_speed, run_enumeration=False, device_address=address
     )
 
     # TODO randomise packet lengths and data
     for pktLength in range(start_length, end_length + 1):
+        if hbw_support == "hbw_on":
+            session.add_event(CreateSofToken(frameNumber))
+            frameNumber += 1
+
         session.add_event(
             UsbTransaction(
                 session,
@@ -29,7 +36,7 @@ def test_session(ep, address, bus_speed):
                 endpointType="ISO",
                 transType="OUT",
                 dataLength=pktLength,
-                interEventDelay=500,
+                interEventDelay=500
             )
         )
 
@@ -45,7 +52,7 @@ def test_session(ep, address, bus_speed):
                 endpointType="ISO",
                 transType="IN",
                 dataLength=pktLength,
-                interEventDelay=498,
+                interEventDelay=498
             )
         )
 
@@ -60,7 +67,7 @@ def test_session(ep, address, bus_speed):
             endpointType="ISO",
             transType="OUT",
             dataLength=pktLength,
-            interEventDelay=500,
+            interEventDelay=500
         )
     )
     session.add_event(
@@ -71,7 +78,7 @@ def test_session(ep, address, bus_speed):
             endpointType="ISO",
             transType="IN",
             dataLength=pktLength,
-            interEventDelay=500,
+            interEventDelay=500
         )
     )
 

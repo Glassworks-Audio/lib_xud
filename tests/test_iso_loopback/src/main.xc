@@ -9,6 +9,8 @@
 #define EP_COUNT_OUT   (6)
 #define EP_COUNT_IN    (6)
 
+#include "xud_shared.h"
+
 /* Endpoint type tables */
 XUD_EpType epTypeTableOut[EP_COUNT_OUT] = {XUD_EPTYPE_CTL, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO};
 XUD_EpType epTypeTableIn[EP_COUNT_IN] =   {XUD_EPTYPE_CTL, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO, XUD_EPTYPE_ISO};
@@ -64,7 +66,7 @@ int TestEp_LoopbackOnce(chanend c_out, chanend c_in, chanend c_out_0)
     }
 
     XUD_Kill(ep_out_0);
-    exit(0);
+    _Exit(0);
 }
 
 int main()
@@ -83,3 +85,5 @@ int main()
 
     return 0;
 }
+
+#include "src/shared.xc"
