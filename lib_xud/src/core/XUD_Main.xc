@@ -100,7 +100,7 @@ extern unsigned XUD_LLD_IoLoop(
                             in port rxa_port,
                             out buffered port:32 txd_port,
                             in port rxe_port, in port ?valtok_port,
-                            XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], XUD_chan epAddr_Ready[],
+                            XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], XUD_chan epAddrReady_local[],
                             int  epCount, chanend? c_sof) ;
 
 
@@ -114,7 +114,7 @@ void XUD_SetCrcTableAddr(unsigned addr);
 static int one = 1;
 
 #pragma unsafe arrays
-void SendBusStateToEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn, unsigned token)
+void SendBusStateToEps(XUD_chan c[], XUD_chan epAddrReady_local[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn, unsigned token)
 {
     for(int i = 0; i < nOut; i++)
     {
@@ -127,8 +127,8 @@ void SendBusStateToEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeT
 
             /* Clear EP ready. Note. small race since EP might set ready after XUD sets busUpdate to 1
              * but this should be caught in time (EP gets CT) */
-            epAddr_Ready[i] = 0;
-            epAddr_Ready[i+ USB_MAX_NUM_EP] = 0;
+            epAddrReady_local[i] = 0;
+            epAddrReady_local[i+ USB_MAX_NUM_EP] = 0;
             XUD_Sup_outct(c[i], token);
         }
     }
@@ -137,7 +137,7 @@ void SendBusStateToEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeT
         if(epTypeTableIn[i] != XUD_EPTYPE_DIS && epStatFlagTableIn[i])
         {
             ep_info[i + USB_MAX_NUM_EP_OUT].busUpdate = 1;
-            epAddr_Ready[i + USB_MAX_NUM_EP_OUT] = 0;
+            epAddrReady_local[i + USB_MAX_NUM_EP_OUT] = 0;
             XUD_Sup_outct(c[i + USB_MAX_NUM_EP_OUT], token);
         }
     }
@@ -163,7 +163,7 @@ static void SendSpeed(XUD_chan c[], XUD_EpType epTypeTableOut[], XUD_EpType epTy
 }
 
 #pragma unsafe arrays
-void GetCTFromEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn)
+void GetCTFromEps(XUD_chan c[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn)
 {
     for(int i = 0; i < nOut; i++)
     {
@@ -182,7 +182,7 @@ void GetCTFromEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeTableO
 }
 
 // Main XUD loop
-static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig)
+static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_local[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig)
 {
     int reset = 1;            /* Flag for if device is returning from a reset */
 
@@ -372,7 +372,7 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
                     XUD_UserSuspend();
 
                     /* Run suspend code, returns 1 if reset from suspend, 0 for resume, -1 for invalid vbus */
-                    reset = XUD_Suspend(pwrConfig, epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
+                    reset = XUD_Suspend(pwrConfig, epChans0_local, epAddrReady_local, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
 
                     if((pwrConfig == XUD_PWR_SELF) && (reset==-1))
                     {
@@ -389,7 +389,7 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
                 {
                     if(!sentReset)
                     {
-                        SendBusStateToEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_RESET);
+                        SendBusStateToEps(epChans0_local, epAddrReady_local, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_RESET);
                         sentReset = 1;
                     }
 
@@ -466,7 +466,7 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
 #endif
 
                     /* Send speed to EPs */
-                    SendSpeed(epChans0, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, g_curSpeed);
+                    SendSpeed(epChans0_local, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, g_curSpeed);
                     sentReset=0;
                 }
             }
@@ -481,7 +481,7 @@ static int XUD_Manager_loop(XUD_chan epChans0[], XUD_chan epAddr_Ready[],  chane
             /* flag0: Rx Error
                flag1: Rx Active
                flag2: Null / Valid Token  */
-            noExit = XUD_LLD_IoLoop(p_usb_rxd, flag1_port, p_usb_txd, flag0_port, flag2_port, epTypeTableOut, epTypeTableIn, epAddr_Ready, noEpOut, c_sof);
+            noExit = XUD_LLD_IoLoop(p_usb_rxd, flag1_port, p_usb_txd, flag0_port, flag2_port, epTypeTableOut, epTypeTableIn, epAddrReady_local, noEpOut, c_sof);
 
 
             if(XUD_THREAD_MODE_FAST_EN)
@@ -678,21 +678,6 @@ int XUD_Main(chanend c_ep_out[], int noEpOut,
 
     SetupEndpoints(c_ep_out, noEpOut, c_ep_in, noEpIn, epTypeTableOut, epTypeTableIn);
 
-#if 0
-    /* Check that if the required channel has a destination if the EP is marked as in use */
-    for( int i = 0; i < noEpOut + noEpIn; i++ )
-    {
-        if( XUD_Sup_getd( epAddr_Ready[i] )  == 0 && epTypeTableOut[i] != XUD_EPTYPE_DIS )
-            XUD_Error_hex("XUD_Manager: OUT Ep marked as in use but chanend has no dest: ", i);
-    }
-
-    for( int i = 0; i < noEpOut + noEpIn; i++ )
-    {
-        if( XUD_Sup_getd( epAddr_Ready[i + XUD_EP_COUNT ] )  == 0 && epTypeTableIn[i] != XUD_EPTYPE_DIS )
-            XUD_Error_hex("XUD_Manager: IN Ep marked as in use but chanend has no dest: ", i);
-    }
-#endif
-
     /* Run the main XUD loop */
     XUD_Manager_loop(epChans0, epAddr_Ready, c_sof, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, pwrConfig);
 
@@ -704,20 +689,6 @@ int XUD_Main(chanend c_ep_out[], int noEpOut,
     }
 
     return 0;
-}
-
-/* Legacy API support */
-int XUD_Manager(chanend c_epOut[], int noEpOut,
-                chanend c_epIn[], int noEpIn,
-                NULLABLE_RESOURCE(chanend, c_sof),
-                XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[],
-                NULLABLE_RESOURCE(port, p_usb_rst),
-                NULLABLE_RESOURCE(clock, clk),
-                unsigned rstMask,
-                XUD_BusSpeed_t desiredSpeed,
-                XUD_PwrConfig pwrConfig)
-{
-    return XUD_Main(c_epOut, noEpOut, c_epIn, noEpIn, c_sof, epTypeTableOut, epTypeTableIn, desiredSpeed, pwrConfig); //NOCOVER
 }
 
 

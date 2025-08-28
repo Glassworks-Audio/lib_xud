@@ -14,14 +14,14 @@
 
 unsigned getsr_int();
 
-int write_periph_word(tileref tile, unsigned peripheral, unsigned addr, unsigned data)
+int write_periph_word(tileref ref, unsigned peripheral, unsigned addr, unsigned data)
 {
     unsigned tmp[1];
     tmp[0] = data;
-    return write_periph_32(tile, peripheral, addr, 1, tmp);
+    return write_periph_32(ref, peripheral, addr, 1, tmp);
 }
 
-int read_periph_word(tileref tile, unsigned peripheral, unsigned addr, unsigned &data)
+int read_periph_word(tileref ref, unsigned peripheral, unsigned addr, unsigned &data)
 {
     unsigned tmp[1];
     unsigned prevSr = 0;
@@ -32,7 +32,7 @@ int read_periph_word(tileref tile, unsigned peripheral, unsigned addr, unsigned 
     /* Clear the interrupt bit in SR  */
     DISABLE_INTERRUPTS();
 
-    int retval = read_periph_32(tile, peripheral, addr, 1, tmp);
+    int retval = read_periph_32(ref, peripheral, addr, 1, tmp);
 
     /* Re-enable interrupts if they were previously enabled */
     if(prevSr)
@@ -42,12 +42,12 @@ int read_periph_word(tileref tile, unsigned peripheral, unsigned addr, unsigned 
     return retval;
 }
 
-void write_periph_word_two_part_start(chanend tmpchan, tileref tile, unsigned peripheral,
+void write_periph_word_two_part_start(chanend tmpchan, tileref ref, unsigned peripheral,
                                       unsigned base_address, unsigned data)
 {
     asm("setd res[%0], %1" ::
         "r"(tmpchan),
-        "r"((get_tile_id(tile) << 16) | (peripheral << 8) | XS1_RES_TYPE_CHANEND));
+        "r"((get_tile_id(ref) << 16) | (peripheral << 8) | XS1_RES_TYPE_CHANEND));
 
     /* Preload as much as possible, everything up to last byte of data */
     outct(tmpchan, CT_PERIPH_WRITE);

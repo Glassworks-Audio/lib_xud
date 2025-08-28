@@ -66,7 +66,7 @@ int XUD_Init()
 }
 
 void SendBusStateToEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn, unsigned token);
-void GetCTFromEps(XUD_chan c[], XUD_chan epAddr_Ready[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn);
+void GetCTFromEps(XUD_chan c[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int nOut, int nIn);
 
 /** XUD_Suspend
   * @brief  Function called when device is suspended. This should include any clock down code etc.
@@ -89,7 +89,7 @@ int XUD_Suspend(XUD_PwrConfig pwrConfig, XUD_chan epChans0[], XUD_chan epAddr_Re
     SendBusStateToEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_SUSPEND);
 
     /* Wait for ACK from app informing power down is complete */
-    GetCTFromEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
+    GetCTFromEps(epChans0, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
 
     while(1)
     {
@@ -124,7 +124,7 @@ int XUD_Suspend(XUD_PwrConfig pwrConfig, XUD_chan epChans0[], XUD_chan epAddr_Re
                 /* Tell app to spin up */
                 SendBusStateToEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_RESUME);
 
-                GetCTFromEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
+                GetCTFromEps(epChans0, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
 
                 if(XUD_SUSPEND_PHY)
                 {
@@ -153,7 +153,7 @@ int XUD_Suspend(XUD_PwrConfig pwrConfig, XUD_chan epChans0[], XUD_chan epAddr_Re
                 SendBusStateToEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_SUSPEND);
 
                 /* Wait for app to power down */
-                GetCTFromEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
+                GetCTFromEps(epChans0, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
 
                 break;
 
@@ -164,7 +164,7 @@ int XUD_Suspend(XUD_PwrConfig pwrConfig, XUD_chan epChans0[], XUD_chan epAddr_Re
                 SendBusStateToEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_RESUME);
 
                 /* Wait for app to confirm it has spun up */
-                GetCTFromEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
+                GetCTFromEps(epChans0, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
 
                 if(XUD_SUSPEND_PHY)
                 {
@@ -207,7 +207,7 @@ int XUD_Suspend(XUD_PwrConfig pwrConfig, XUD_chan epChans0[], XUD_chan epAddr_Re
                                 SendBusStateToEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_SUSPEND);
 
                                 /* Wait for app to power down */
-                                GetCTFromEps(epChans0, epAddr_Ready, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
+                                GetCTFromEps(epChans0, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
                             }
                             return 0;
 

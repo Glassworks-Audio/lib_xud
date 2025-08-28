@@ -24,7 +24,7 @@ def test_session(ep, address, bus_speed, core_freq):
     )
 
     for pktLength in range(start_length, end_length):
-        session.add_event(CreateSofToken(frameNumber, interEventDelay=5))
+        session.add_event(CreateSofToken(frameNumber, interEventDelay=6))
         frameNumber += 1
         session.add_event(
             UsbTransaction(

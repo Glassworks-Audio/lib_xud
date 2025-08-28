@@ -1,29 +1,14 @@
 // This file relates to internal XMOS infrastructure and should be ignored by external users
 
-@Library('xmos_jenkins_shared_library@v0.39.0') _
-
-def clone_test_deps() {
-  dir("${WORKSPACE}") {
-    sh "git clone git@github.com:xmos/test_support"
-    sh "git -C test_support checkout 9a3c8b8c8fdfa82c90a24e7abf3b4430ac506238"
-  }
-}
+@Library('xmos_jenkins_shared_library@v0.42.0') _
 
 getApproval()
 
 pipeline {
-  agent {
-    label 'x86_64 && linux && documentation'
-  }
-  options {
-    buildDiscarder(xmosDiscardBuildSettings())
-    skipDefaultCheckout()
-    timestamps()
-  }
+
+  agent none
+
   parameters {
-    choice(name: 'TEST_LEVEL', choices: ['smoke', 'default', 'extended'],
-            description: 'The level of test coverage to run'
-    )
     string(
       name: 'TOOLS_VERSION',
       defaultValue: '-j -b markp_xsim_expose_signals_from_usb_shim latest',
@@ -31,89 +16,108 @@ pipeline {
     )
     string(
       name: 'XMOSDOC_VERSION',
-      defaultValue: 'v7.3.0',
+      defaultValue: 'v7.4.0',
       description: 'The xmosdoc version'
     )
     string(
       name: 'INFR_APPS_VERSION',
-      defaultValue: 'v2.1.0',
+      defaultValue: 'v3.1.1',
       description: 'The infr_apps version'
     )
+    choice(name: 'TEST_LEVEL', choices: ['smoke', 'default', 'extended'],
+            description: 'The level of test coverage to run'
+    )
+  }
+  options {
+    skipDefaultCheckout()
+    timestamps()
+    buildDiscarder(xmosDiscardBuildSettings(onlyArtifacts = false))
   }
 
   stages {
-    stage('Build examples') {
-      steps {
-        println "Stage running on ${env.NODE_NAME}"
-
-        script {
-            def (server, user, repo) = extractFromScmUrl()
-            env.REPO = repo
-        }
-
-        dir("${REPO}") {
-          checkoutScmShallow()
-
-          dir("examples") {
-            withTools(params.TOOLS_VERSION) {
-              sh 'cmake -G "Unix Makefiles" -B build'
-              sh 'xmake -C build -j'
+    stage('🏗️ Build and test') {
+      agent {
+        label 'x86_64 && linux && documentation'
+      }
+      stages {
+        stage('Checkout') {
+          steps {
+            println "Stage running on ${env.NODE_NAME}"
+            script {
+              def (server, user, repo) = extractFromScmUrl()
+              env.REPO_NAME = repo
+            }
+            dir(REPO_NAME){
+              checkoutScmShallow()
             }
           }
         }
-      }
-    }  // Build examples
+        stage('Examples build') {
+          steps {
+            dir("${REPO_NAME}/examples") {
+              xcoreBuild()
+            }
+          }
+        }
+        stage('Library checks') {
+          steps {
+            warnError("lib checks") {
+              runRepoChecks("${WORKSPACE}/${REPO_NAME}")
+            }
+          }
+        }
 
-    stage('Library checks') {
-        steps {
-            warnError("Library checks failed")
+        stage('Documentation') {
+          steps {
+            dir(REPO_NAME) {
+              buildDocs()
+            }
+          }
+        }
+
+        stage('Tests')
+        {
+          steps {
+              withTools(params.TOOLS_VERSION) {
+                dir("${REPO_NAME}/tests") {
+                  createVenv(reqFile: "requirements.txt")
+                  withVenv{
+                    sh "pytest -v -n auto --testlevel=${params.TEST_LEVEL} --enabletracing --junitxml=pytest_result.xml"
+                  }
+                } // dir
+              } // withTools
+          } // steps
+          post
+          {
+            always {
+              junit "${REPO_NAME}/tests/pytest_result.xml"
+            }
+            failure {
+              archiveArtifacts artifacts: "${REPO_NAME}/tests/logs/*.txt", fingerprint: true, allowEmptyArchive: true
+            }
+          }
+        }
+
+        stage("Archive lib") {
+            steps
             {
-                runLibraryChecks("${WORKSPACE}/${REPO}", "${params.INFR_APPS_VERSION}")
+                archiveSandbox(REPO_NAME)
             }
         }
-    }
-
-    stage('Documentation') {
-      steps {
-        dir(REPO) {
-          buildDocs()
+      } // stages
+      post {
+        cleanup {
+          xcoreCleanSandbox()
         }
       }
-    }
-
-    stage('Tests')
-    {
-      steps {
-          clone_test_deps()
-
-          withTools(params.TOOLS_VERSION) {
-            dir("${REPO}/tests") {
-              createVenv(reqFile: "requirements.txt")
-              withVenv{
-                runPytest("--numprocesses=8 --testlevel=${params.TEST_LEVEL} --enabletracing")
-              }
-            } // dir
-          } // withTools
-      } // steps
-      post
-      {
-        failure
-        {
-          archiveArtifacts artifacts: "${REPO}/tests/logs/*.txt", fingerprint: true, allowEmptyArchive: true
-        }
+    } // stage 'build and test'
+    stage('🚀 Release') {
+      when {
+        expression { triggerRelease.isReleasable() }
       }
-    }
-
-    stage("Archive lib") {
-        steps
-        {
-            archiveSandbox(REPO)
-        }
-    }
-  }
-  post {
-    cleanup {
-      xcoreCleanSandbox()
+      steps {
+        triggerRelease()
+      }
     }
   }
 }
