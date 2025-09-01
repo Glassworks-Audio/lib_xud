@@ -16,7 +16,14 @@ set(LIB_COMPILER_FLAGS -O3
                        -fasm-linenum
                        -fcomment-asm
                        -DXUD_FULL_PIDTABLE=1
-                       -g)
+                       -g
+                       -Wall
+                       -Wextra
+                       -Wconversion
+                       -Wsign-compare
+                       -Wdiv-by-zero
+                       -Wfloat-equal
+                       -Wshadow)
 
 set(LIB_COMPILER_FLAGS_XUD_IoLoop.S   ${LIB_COMPILER_FLAGS} -fschedule)
 

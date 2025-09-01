@@ -4,7 +4,8 @@ lib_xud change log
 UNRELEASED
 ----------
 
-  * Added support for high bandwidth ISO endpoints
+  * ADDED: Support for high bandwidth ISO endpoints
+  * REMOVED: Support for legacy API XUD_Manager()
 
 3.0.1
 -----

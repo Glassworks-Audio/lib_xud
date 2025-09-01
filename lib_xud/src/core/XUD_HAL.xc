@@ -54,6 +54,9 @@ unsigned int XUD_EnableUsbPortMux();
 
 void XUD_HAL_EnableUsb(unsigned pwrConfig)
 {
+#ifndef __XS2A__
+    (void)pwrConfig;
+#endif
     /* For xCORE-200 enable USB port muxing before enabling phy etc */
     XUD_EnableUsbPortMux(); //setps(XS1_PS_XCORE_CTRL0, UIFM_MODE);
 

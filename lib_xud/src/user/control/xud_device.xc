@@ -30,6 +30,7 @@ unsigned short g_epStatusIn[MAX_EPS];
 #pragma unsafe arrays
 XUD_Result_t USB_GetSetupPacket(XUD_ep ep_out, XUD_ep ep_in, USB_SetupPacket_t &sp)
 {
+    (void)ep_in;
     unsigned char sbuffer[120];
     unsigned length;
 
@@ -392,7 +393,7 @@ XUD_Result_t USB_StandardRequests(XUD_ep ep_out, XUD_ep ep_in,
                                 if( stringID == 0 )
                                 {
                                     buffer[0] = datalength + 2;
-                                    if( sp.wLength < datalength + 2 )
+                                    if( (size_t)sp.wLength < datalength + (size_t)2 )
                                     {
                                         datalength = sp.wLength - 2;
                                     }
@@ -409,7 +410,7 @@ XUD_Result_t USB_StandardRequests(XUD_ep ep_out, XUD_ep ep_in,
                                     /* Set data length in descriptor (+2 due to 2 byte datalength)*/
                                     buffer[0] = datalength + 2;
 
-                                    if(sp.wLength < datalength + 2)
+                                    if((size_t)sp.wLength < datalength + (size_t)2)
                                     {
                                         datalength = sp.wLength - 2;
                                     }
@@ -462,7 +463,7 @@ XUD_Result_t USB_StandardRequests(XUD_ep ep_out, XUD_ep ep_in,
                         }
 
                         /* Record interface change */
-                        if((sp.wIndex < numInterfaces) && (sp.wIndex < MAX_INTS))
+                        if(((int)sp.wIndex < numInterfaces) && ((int)sp.wIndex < MAX_INTS))
                         {
                             /* Note here we assume the host has given us a valid Alternate setting
                              *  It is hard for use to have a generic check for this here (without parsing the descriptors)
@@ -502,7 +503,7 @@ XUD_Result_t USB_StandardRequests(XUD_ep ep_out, XUD_ep ep_in,
                             numInterfaces = cfgDesc_hs[4];
                         }
 
-                        if((sp.wIndex < numInterfaces) && (sp.wIndex < MAX_INTS))
+                        if(((int)sp.wIndex < numInterfaces) && ((int)sp.wIndex < MAX_INTS))
                         {
                             buffer[0] = g_interfaceAlt[sp.wIndex];
 

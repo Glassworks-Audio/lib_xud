@@ -221,17 +221,6 @@ int XUD_Main(/*tileref * unsafe usbtileXUD_res_t &xudres, */
                 XUD_BusSpeed_t desiredSpeed,
                 XUD_PwrConfig pwrConfig);
 
-/* Legacy API support */
-int XUD_Manager(chanend c_epOut[], int noEpOut,
-                chanend c_epIn[], int noEpIn,
-                NULLABLE_RESOURCE(chanend, c_sof),
-                XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[],
-                NULLABLE_RESOURCE(port, p_usb_rst),
-                NULLABLE_RESOURCE(xcore_clock_t, clk),
-                unsigned rstMask,
-                XUD_BusSpeed_t desiredSpeed,
-                XUD_PwrConfig pwrConfig);
-
 /**
  * \brief   This function must be called by a thread that deals with an OUT endpoint.
  *          When the host sends data, the low-level driver will fill the buffer. It
