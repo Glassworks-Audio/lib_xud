@@ -1,5 +1,6 @@
 
 |newpage|
+
 .. _sec_programming:
 
 *****************
@@ -26,11 +27,11 @@ each include one for endpoint 0, for example::
 
 The endpoint types are:
 
-    * ``XUD_EPTYPE_ISO``: Isochronous endpoint
-    * ``XUD_EPTYPE_INT``: Interrupt endpoint
-    * ``XUD_EPTYPE_BUL``: Bulk endpoint
-    * ``XUD_EPTYPE_CTL``: Control endpoint
-    * ``XUD_EPTYPE_DIS``: Disabled endpoint
+* ``XUD_EPTYPE_ISO``: Isochronous endpoint
+* ``XUD_EPTYPE_INT``: Interrupt endpoint
+* ``XUD_EPTYPE_BUL``: Bulk endpoint
+* ``XUD_EPTYPE_CTL``: Control endpoint
+* ``XUD_EPTYPE_DIS``: Disabled endpoint
 
 ``XUD_STATUS_ENABLE`` is ORed in to the endpoints that wish to be informed of USB bus resets (see
 :ref:`sec_status_reporting`).

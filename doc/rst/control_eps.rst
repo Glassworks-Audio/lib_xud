@@ -90,48 +90,48 @@ marked “Halted” (Using ``XUD_SetStall_Out()`` and ``XUD_SetStall_In()``) and
 
 The ``USB_StandardRequests()`` function  handles the following `Standard Device Requests`:
 
-    * ``SET_ADDRESS``: The device address is set in XUD (using ``XUD_SetDevAddr()``).
+* ``SET_ADDRESS``: The device address is set in XUD (using ``XUD_SetDevAddr()``).
 
-    * ``SET_CONFIGURATION``: A global variable is updated with the given configuration value.
+* ``SET_CONFIGURATION``: A global variable is updated with the given configuration value.
 
-    * ``GET_STATUS``:  The status of the device is returned. This uses the device Configuration descriptor to return if the device is bus powered or not.
+* ``GET_STATUS``:  The status of the device is returned. This uses the device Configuration descriptor to return if the device is bus powered or not.
 
-    * ``SET_CONFIGURATION``: A global variable is returned with the current configuration last set by ``SET_CONFIGURATION``.
+* ``SET_CONFIGURATION``: A global variable is returned with the current configuration last set by ``SET_CONFIGURATION``.
 
-    * ``GET_DESCRIPTOR``: Returns the relevant descriptors. Note, some changes of returned descriptor will occur based on the current bus speed the device is running.
+* ``GET_DESCRIPTOR``: Returns the relevant descriptors. Note, some changes of returned descriptor will occur based on the current bus speed the device is running.
 
-        * ``DEVICE``
-        * ``CONFIGURATION``
-        * ``DEVICE_QUALIFIER``
-        * ``OTHER_SPEED_CONFIGURATION``
-        * ``STRING``
+  * ``DEVICE``
+  * ``CONFIGURATION``
+  * ``DEVICE_QUALIFIER``
+  * ``OTHER_SPEED_CONFIGURATION``
+  * ``STRING``
 
 In addition the following test mode requests are dealt with (with the correct test mode set in XUD):
 
-    * ``SET_FEATURE``
+* ``SET_FEATURE``
 
-        * ``TEST_J``
-        * ``TEST_K``
-        * ``TEST_SE0_NAK``
-        * ``TEST_PACKET``
-        * ``FORCE_ENABLE``
+  * ``TEST_J``
+  * ``TEST_K``
+  * ``TEST_SE0_NAK``
+  * ``TEST_PACKET``
+  * ``FORCE_ENABLE``
 
 ``USB_StandardRequests()``: Standard Interface Requests
 -------------------------------------------------------
 
 The ``USB_StandardRequests()`` function  handles the following Standard Interface Requests:
 
-    * ``SET_INTERFACE`` : A global variable is maintained for each interface. This is updated by a SET_INTERFACE. Some basic range checking is included using the value `numInterfaces` from the Configuration Descriptor.
-    * ``GET_INTERFACE``: Returns the value written by ``SET_INTERFACE``.
+* ``SET_INTERFACE`` : A global variable is maintained for each interface. This is updated by a SET_INTERFACE. Some basic range checking is included using the value `numInterfaces` from the Configuration Descriptor.
+* ``GET_INTERFACE``: Returns the value written by ``SET_INTERFACE``.
 
 ``USB_StandardRequests()``: Standard Endpoint Requests
 --------------------------------------------------------
 
 The ``USB_StandardRequests()`` function handles the following Standard Endpoint Requests:
 
-    * ``SET_FEATURE``
-    * ``CLEAR_FEATURE``
-    * ``GET_STATUS``
+* ``SET_FEATURE``
+* ``CLEAR_FEATURE``
+* ``GET_STATUS``
 
 Control Endpoint Example
 ========================
