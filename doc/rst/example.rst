@@ -163,11 +163,11 @@ Class (or Application) specific requests that must be handled.
 
 In the case of the HID mouse there are three mandatory requests that must be handled:
 
-    * ``GET_DESCRIPTOR``
+* ``GET_DESCRIPTOR``
 
-        * ``HID``: Return the HID descriptor
-        * ``REPORT``: Return the HID report descriptor
-        * ``GET_REPORT``: Return the HID report data
+  * ``HID``: Return the HID descriptor
+  * ``REPORT``: Return the HID report descriptor
+  * ``GET_REPORT``: Return the HID report data
 
 See the HID Class Specification and related documentation for full details of all HID requests.
 

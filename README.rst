@@ -5,7 +5,7 @@ lib_xud: USB Device Library
 ###########################
 
 :vendor: XMOS
-:version: 3.0.1
+:version: 4.0.0
 :scope: General Use
 :description: USB device library
 :category: General Purpose
@@ -40,7 +40,7 @@ Known issues
 Development repo
 ****************
 
-* `lib_xud <https://www.github.com/xmos/lib_xud>`_
+* `lib_xud <https://www.github.com/xmos/lib_xud>`_ (https://www.github.com/xmos/lib_xud)
 
 **************
 Required tools
@@ -70,6 +70,6 @@ The following application notes use this library:
 Support
 *******
 
-This package is supported by XMOS Ltd. Issues can be raised against the software at:
-http://www.xmos.com/support
+This package is supported by XMOS Ltd. Issues can be raised against the software at
+`www.xmos.com/support <https://www.xmos.com/support>`_ or using GitHub `issues <https://github.com/xmos/lib_xud/issues>`_.
 

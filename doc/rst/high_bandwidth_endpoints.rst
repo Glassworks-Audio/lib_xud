@@ -137,6 +137,6 @@ Synchronous operation
 
 For synchronous operations, the functions :c:func:`XUD_SetBuffer` or :c:func:`XUD_GetBuffer` are called once per transfer and only
 return once the transfer is complete.
-The ``buffer`` and ``datalength`` parameters should cover the entire transfer size, i.e. the same as described for the asynchronous operation.
+The ``buffer`` and ``datalength`` parameters should cover the entire transfer size, the same as described for asynchronous operation.
 
 
