@@ -13,7 +13,10 @@ The implementation in ``lib_xud`` has the following limitations:
 * A maximum of 2 transactions per microframe is supported (the USB specification allows up to 3).
 * The maximum data payload size per transaction is the same across all high bandwidth endpoints
 * The maximum data payload size per transaction must be a multiple of 4 bytes.
-* This feature is supported only on `xcore.ai` series devices running at a system frequency of 800 MHz due to the performance demands of high bandwidth transfers.
+
+.. warning::
+
+    This feature is supported only on `xcore.ai` series devices running at a system frequency of 800 MHz due to the performance demands of high bandwidth transfers.
 
 Enabling high bandwidth ISO endpoint support
 ============================================

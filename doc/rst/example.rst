@@ -47,7 +47,7 @@ Declarations
 ``main()``
 ==========
 
-The ``main()`` function creates three tasks: the XUD Io task, endpoint 0, and a task for handling
+The ``main()`` function creates three tasks: the XUD IO task, endpoint 0, and a task for handling
 the HID endpoint.
 An array of channels is used for both IN and OUT endpoints, endpoint 0 requires both, the HID
 task simply implements an IN endpoint sending mouse data to the host.

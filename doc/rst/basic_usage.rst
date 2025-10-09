@@ -45,7 +45,7 @@ Suitable values are provided in the ``XUD_EpTransferType`` `enum`:
 OUT endpoint N will use index N of the output-endpoint-table, IN endpoint 0x8N will use index N
 of the inpout-endpoint-table. Endpoint 0 must exist in both tables.
 
-..note::
+.. note::
 
     Endpoints that are not used will ``NAK`` any traffic from the host.
 
