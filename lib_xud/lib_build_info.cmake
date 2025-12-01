@@ -1,6 +1,6 @@
 set(LIB_NAME lib_xud)
 set(LIB_VERSION 4.0.0)
-set(LIB_INCLUDES api src/user api/legacy src/core src/user/class)
+set(LIB_INCLUDES api src/user src/user/control/msos2 api/legacy src/core src/user/class)
 
 set(LIB_DEPENDENT_MODULES "")
 

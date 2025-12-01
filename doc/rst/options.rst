@@ -13,3 +13,6 @@ This section lists build time configuration defines that impact the behaviour of
 
 .. doxygendefine:: XUD_USB_ISO_EP_MAX_TXN_SIZE
 
+.. doxygendefine:: XUD_WINUSB_DEVICE_INTERFACE_GUID_CONTROL
+
+.. doxygendefine:: XUD_REQUEST_GET_MSOS_DESCRIPTOR

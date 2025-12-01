@@ -1,6 +1,12 @@
 lib_xud change log
 ==================
 
+UNRELEASED
+----------
+
+  * ADDED: Support for Microsoft OS 2.0 descriptors
+  * CHANGED: Updated documentation
+
 4.0.0
 -----
 

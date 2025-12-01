@@ -133,6 +133,50 @@ The ``USB_StandardRequests()`` function handles the following Standard Endpoint 
 * ``CLEAR_FEATURE``
 * ``GET_STATUS``
 
+.. _sec_msos_support:
+
+MSOS 2.0 Support
+================
+
+``lib_xud`` provides support for the Microsoft OS 2.0 Descriptors (MSOS 2.0) specification. This allows for
+automatic driver installation on Windows hosts for devices that support this feature.
+
+.. note:: 
+   
+   MSOS 2.0 descriptors are only supported in C code, not XC. This is due to structure packing requirements.
+   The the following functions are available if the application Endpoint0 function is written in C.
+   However, XC applications can still make use of MSOS 2.0 descriptors by implementing the
+   a simple wrapper. See :c:func:`XUD_Init_Simple_Ep0_Msos_Descriptors` for more details.
+
+A detailed explanation of MSOS 2.0 descriptors is beyond the scope of this documentation.
+Please see the official Microsoft documentation for more details. Also, see the application note 
+`AN00136 Example USB Vendor Specific Device <https://www.xmos.com/file/an00136>`_ and the examples 
+in ``lib_xua`` for more details.
+
+The MSOS 2.0 descriptors are retrieved via requests over Endpoint0, and need some simple preparation before enumeration.
+
+.. doxygenfunction:: XUD_RegisterMsosDescriptors
+
+.. doxygenfunction:: XUD_Update_Guid_In_Msos_Desc
+
+.. doxygenfunction:: XUD_GetBosDescriptor
+
+.. doxygenfunction:: XUD_GetMsosDescriptor
+
+MSOS 2.0 Configuration
+----------------------
+
+There are defines provided to aid the construction and access to the MSOS 2.0 descriptors.
+
+See :c:macro:`XUD_WINUSB_DEVICE_INTERFACE_GUID_CONTROL` and :c:macro:`XUD_REQUEST_GET_MSOS_DESCRIPTOR` for more details.
+
+MSOS 2.0 Example Wrapper
+------------------------
+
+A simple example wrapper function is provided to aid XC applications in implementing MSOS 2.0 support.
+
+.. doxygenfunction:: XUD_Init_Simple_Ep0_Msos_Descriptors
+
 Control Endpoint Example
 ========================
 

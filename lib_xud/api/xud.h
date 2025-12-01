@@ -166,13 +166,45 @@ typedef enum XUD_BusState_t
     XUD_BUS_KILL
 } XUD_BusState_t;
 
+/**
+ * @def XUD_OSC_MHZ
+ * @brief Frequency of oscillator used to clock xcore (in MHz)
+ */
 #ifndef XUD_OSC_MHZ
 #define XUD_OSC_MHZ                 (24)
 #endif
 
-/* Option to put the phy in low power mode during USB suspend */
+/**
+ * @def XUD_SUSPEND_PHY
+ * @brief Option to put the PHY in low power mode during USB suspend.
+ *
+ * When set to 1, the PHY will enter low power mode during USB suspend.
+ * When set to 0 (default), this feature is disabled.
+ *
+ * Only supported on XS3A/xcore.ai based devices.
+ */
 #ifndef XUD_SUSPEND_PHY
-#define XUD_SUSPEND_PHY             (1)
+#define XUD_SUSPEND_PHY             (0)
+#endif
+
+/**
+ * @brief Device interface GUID for the MSOS 2.0 Descriptor.
+ *
+ * This is provided as part of the device registry property in the MSOS 2.0 descriptor.
+ * Default: "{a008382b-5adc-464f-a849-17500f09074c}" User can override by defining their own in xud_conf.h
+ */
+#ifndef XUD_WINUSB_DEVICE_INTERFACE_GUID_CONTROL
+#define XUD_WINUSB_DEVICE_INTERFACE_GUID_CONTROL    "{a008382b-5adc-464f-a849-17500f09074c}"
+#endif
+
+/**
+ * @brief Request code for the D2H vendor request that the host will use to request the MSOS descriptor.
+ *
+ * The user shouldn't use this bRequest number in their custom vendor requests to the device, as it is now reserved for descriptor handling.
+ * However, the user can override this define to use a different bRequest number if required.
+ */
+#ifndef XUD_REQUEST_GET_MSOS_DESCRIPTOR
+#define XUD_REQUEST_GET_MSOS_DESCRIPTOR     0x20
 #endif
 
 /** This performs the low-level USB I/O operations. Note that this
@@ -478,27 +510,6 @@ void XUD_SetData_Select(chanend c, XUD_ep ep, REFERENCE_PARAM(XUD_Result_t, resu
 
 /* Control token defines - used to inform EPs of bus-state types */
 #define USB_RESET_TOKEN             (8)        /* Control token value that signals RESET */
-
-/**
- * @def XUD_OSC_MHZ
- * @brief Frequency of oscillator used to clock xcore (in MHz)
- */
-#ifndef XUD_OSC_MHZ
-#define XUD_OSC_MHZ                 (24)
-#endif
-
-/**
- * @def XUD_SUSPEND_PHY
- * @brief Option to put the PHY in low power mode during USB suspend.
- *
- * When set to 1, the PHY will enter low power mode during USB suspend.
- * When set to 0 (default), this feature is disabled.
- *
- * Only supported on XS3A/xcore.ai based devices.
- */
-#ifndef XUD_SUSPEND_PHY
-#define XUD_SUSPEND_PHY             (0)
-#endif
 
 /**
  * @def XUD_THREAD_MODE_FAST_EN
