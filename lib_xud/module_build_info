@@ -29,11 +29,13 @@ EXPORT_INCLUDE_DIRS = api \
 
 INCLUDE_DIRS = $(EXPORT_INCLUDE_DIRS) \
                src/core \
-               src/user/class
+               src/user/class \
+               src/user/control/msos2
 
 SOURCE_DIRS = src/core \
               src/user/client \
-              src/user/control
+              src/user/control \
+              src/user/control/msos2
 
 EXCLUDE_FILES += XUD_CrcAddrCheck.S \
                  XUD_PidJumpTable.S \
