@@ -1,17 +1,17 @@
 lib_xud change log
 ==================
 
-UNRELEASED
-----------
+4.0.1
+-----
 
-  * ADDED: Support for Microsoft OS 2.0 descriptors
-  * CHANGED: Updated documentation
+  * ADDED:    Support for Microsoft OS 2.0 descriptors
+  * CHANGED:  Updated documentation
 
 4.0.0
 -----
 
-  * ADDED: Support for high bandwidth ISO endpoints
-  * REMOVED: Support for legacy API XUD_Manager()
+  * ADDED:    Support for high bandwidth ISO endpoints
+  * REMOVED:  Support for legacy API XUD_Manager()
 
 3.0.1
 -----

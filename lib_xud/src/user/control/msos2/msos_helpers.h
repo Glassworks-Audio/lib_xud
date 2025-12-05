@@ -46,7 +46,7 @@ void XUD_RegisterMsosDescriptors(const desc_handle_t *bos_descs, const desc_hand
  * The device MSOS 2.0 GUID is used by the host to bind the correct driver to the device.
  * The example GUID provided are intended to use with WINUSB driver on Windows.
  * 
- * When user's develop their own USB device, they should generate their own unique GUID for the device
+ * When users develop their own USB device, they should generate their own unique GUID for the device
  * interface and link this to the host driver.
  * 
  * \param registry  Pointer to the registry property descriptor to update
@@ -62,6 +62,8 @@ void XUD_Update_Guid_In_Msos_Desc(MSOS_desc_registry_property_t *registry, const
  * 
  * Request will be Standard Get request (USB_GET_DESCRIPTOR) with wValue high byte == USB_DESCTYPE_BOS
  * 
+ * This function verifies the request is `wValue high byte == USB_DESCTYPE_BOS` before sending the BOS descriptor.
+ * 
  * \param ep0_out   Endpoint 0 OUT endpoint
  * \param ep0_in    Endpoint 0 IN endpoint
  * \param sp        Pointer to the setup packet of the request
@@ -75,7 +77,10 @@ XUD_Result_t XUD_GetBosDescriptor(XUD_ep ep0_out, XUD_ep ep0_in, const USB_Setup
 /** Endpoint0 function to send the MSOS descriptor when prompted via a Vendor Get request
  * 
  * Request will be a Vendor Get request with bRequest == XUD_REQUEST_GET_MSOS_DESCRIPTOR.
- * This is defined in xud.h
+ * This constant is defined in xud.h.
+ * 
+ * This function verifies that the request is `bRequest == XUD_REQUEST_GET_MSOS_DESCRIPTOR` before
+ * sending the descriptor.
  * 
  * \param ep0_out   Endpoint 0 OUT endpoint
  * \param ep0_in    Endpoint 0 IN endpoint

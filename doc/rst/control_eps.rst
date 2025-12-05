@@ -144,14 +144,14 @@ automatic driver installation on Windows hosts for devices that support this fea
 .. note:: 
    
    MSOS 2.0 descriptors are only supported in C code, not XC. This is due to structure packing requirements.
-   The the following functions are available if the application Endpoint0 function is written in C.
-   However, XC applications can still make use of MSOS 2.0 descriptors by implementing the
+   The following functions are available if the application Endpoint0 function is written in C.
+   However, XC applications can still make use of MSOS 2.0 descriptors by implementing
    a simple wrapper. See :c:func:`XUD_Init_Simple_Ep0_Msos_Descriptors` for more details.
 
 A detailed explanation of MSOS 2.0 descriptors is beyond the scope of this documentation.
 Please see the official Microsoft documentation for more details. Also, see the application note 
 `AN00136 Example USB Vendor Specific Device <https://www.xmos.com/file/an00136>`_ and the examples 
-in ``lib_xua`` for more details.
+in ``lib_xua`` for use of this feature.
 
 The MSOS 2.0 descriptors are retrieved via requests over Endpoint0, and need some simple preparation before enumeration.
 
