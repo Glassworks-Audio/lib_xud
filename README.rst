@@ -5,11 +5,11 @@ lib_xud: USB Device Library
 ###########################
 
 :vendor: XMOS
-:version: 4.0.0
+:version: 4.0.1
 :scope: General Use
 :description: USB device library
 :category: General Purpose
-:keywords: USB, HID
+:keywords: USB
 :devices: xcore.ai, xcore-200
 
 *******
