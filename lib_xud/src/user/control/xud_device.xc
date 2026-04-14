@@ -10,6 +10,7 @@
 #include <string.h>
 #include <xs1.h>
 #include <print.h>
+#include "spi_registers.h"	// &&&&
 
 #ifndef MAX_INTS
 /* Maximum number of interfaces supported */
@@ -89,7 +90,7 @@ XUD_Result_t USB_StandardRequests(XUD_ep ep_out, XUD_ep ep_in,
     NULLABLE_ARRAY_OF(unsigned char, devDesc_fs), int devDescLength_fs,
     NULLABLE_ARRAY_OF(unsigned char, cfgDesc_fs), int cfgDescLength_fs,
     char * unsafe strDescs[], int strDescsLength,
-    USB_SetupPacket_t &sp, XUD_BusSpeed_t usbBusSpeed)
+    USB_SetupPacket_t &sp, XUD_BusSpeed_t usbBusSpeed, chanend c_con)	// &&&&
 {
      /* Return value */
     int datalength;
@@ -144,6 +145,10 @@ XUD_Result_t USB_StandardRequests(XUD_ep ep_out, XUD_ep ep_in,
 
                         /* Set the device address in XUD */
                         XUD_HAL_SetDeviceAddress(sp.wValue);
+
+                        // &&&& consider ourselves connected when the device address is set
+                        c_con <: SET_CONNECT;
+
                         return XUD_RES_OKAY;
 
                     }

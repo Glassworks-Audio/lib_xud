@@ -182,7 +182,7 @@ void GetCTFromEps(XUD_chan c[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTa
 }
 
 // Main XUD loop
-static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_local[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig)
+static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_local[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig, chanend c_dis)
 {
     int reset = 1;            /* Flag for if device is returning from a reset */
 
@@ -368,7 +368,10 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                 /* Handle suspend */
                 if(!reset)
                 {
-                    /* Run user suspend code */
+                     // **** Disconnect ****
+                    c_dis <: 1;
+
+                   /* Run user suspend code */
                     XUD_UserSuspend();
 
                     /* Run suspend code, returns 1 if reset from suspend, 0 for resume, -1 for invalid vbus */
@@ -668,18 +671,25 @@ void SetupEndpoints(chanend c_ep_out[], int noEpOut, chanend c_ep_in[], int noEp
 
 
 #pragma unsafe arrays
+// &&&& add channels for hold and disconnect functionality
 int XUD_Main(chanend c_ep_out[], int noEpOut,
                 chanend c_ep_in[], int noEpIn,
                 chanend ?c_sof,
                 XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[],
-                XUD_BusSpeed_t speed, XUD_PwrConfig pwrConfig)
+                XUD_BusSpeed_t speed, XUD_PwrConfig pwrConfig, chanend c_hold, chanend c_dis)
 {
     g_desSpeed = speed;
+
+	// &&&&
+	// after boot, device is held in standby until all settings are made via spi
+	// this releases it to continue booting and appear on the USB bus
+    int x;
+    c_hold :> x;
 
     SetupEndpoints(c_ep_out, noEpOut, c_ep_in, noEpIn, epTypeTableOut, epTypeTableIn);
 
     /* Run the main XUD loop */
-    XUD_Manager_loop(epChans0, epAddr_Ready, c_sof, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, pwrConfig);
+    XUD_Manager_loop(epChans0, epAddr_Ready, c_sof, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, pwrConfig, c_dis);
 
     // Need to close, drain, and check - three stages.
     for(int i = 0; i < 2; i++)

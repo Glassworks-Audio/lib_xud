@@ -245,13 +245,15 @@ typedef enum XUD_BusState_t
  *                      Valid values are XUD_PWR_SELF and XUD_PWR_BUS.
  *
  */
-int XUD_Main(/*tileref * unsafe usbtileXUD_res_t &xudres, */
+
+ // &&&&
+ int XUD_Main(/*tileref * unsafe usbtileXUD_res_t &xudres, */
                 chanend c_epOut[], int noEpOut,
                 chanend c_epIn[], int noEpIn,
                 NULLABLE_RESOURCE(chanend, c_sof),
                 XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[],
                 XUD_BusSpeed_t desiredSpeed,
-                XUD_PwrConfig pwrConfig);
+                XUD_PwrConfig pwrConfig, chanend c_hold, chanend c_dis);
 
 /**
  * \brief   This function must be called by a thread that deals with an OUT endpoint.
