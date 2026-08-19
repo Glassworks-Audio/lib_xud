@@ -253,7 +253,11 @@ typedef enum XUD_BusState_t
                 NULLABLE_RESOURCE(chanend, c_sof),
                 XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[],
                 XUD_BusSpeed_t desiredSpeed,
-                XUD_PwrConfig pwrConfig, chanend c_hold, chanend c_dis);
+                /* GW: one channel to the app's register file. Before boot the
+                 * app writes to it to release XUD; after that XUD writes to it
+                 * to report bus disconnects. Was two channels, merged because
+                 * tile[0] has no chanends to spare. */
+                XUD_PwrConfig pwrConfig, chanend c_usb_ctl);
 
 /**
  * \brief   This function must be called by a thread that deals with an OUT endpoint.

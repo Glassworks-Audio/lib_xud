@@ -182,7 +182,7 @@ void GetCTFromEps(XUD_chan c[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTa
 }
 
 // Main XUD loop
-static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_local[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig, chanend c_dis)
+static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_local[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig, chanend c_usb_ctl)
 {
     int reset = 1;            /* Flag for if device is returning from a reset */
 
@@ -369,7 +369,7 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                 if(!reset)
                 {
                      // **** Disconnect ****
-                    c_dis <: 1;
+                    c_usb_ctl <: 1;
 
                    /* Run user suspend code */
                     XUD_UserSuspend();
@@ -676,7 +676,7 @@ int XUD_Main(chanend c_ep_out[], int noEpOut,
                 chanend c_ep_in[], int noEpIn,
                 chanend ?c_sof,
                 XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[],
-                XUD_BusSpeed_t speed, XUD_PwrConfig pwrConfig, chanend c_hold, chanend c_dis)
+                XUD_BusSpeed_t speed, XUD_PwrConfig pwrConfig, chanend c_usb_ctl)
 {
     g_desSpeed = speed;
 
@@ -684,12 +684,12 @@ int XUD_Main(chanend c_ep_out[], int noEpOut,
 	// after boot, device is held in standby until all settings are made via spi
 	// this releases it to continue booting and appear on the USB bus
     int x;
-    c_hold :> x;
+    c_usb_ctl :> x;
 
     SetupEndpoints(c_ep_out, noEpOut, c_ep_in, noEpIn, epTypeTableOut, epTypeTableIn);
 
     /* Run the main XUD loop */
-    XUD_Manager_loop(epChans0, epAddr_Ready, c_sof, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, pwrConfig, c_dis);
+    XUD_Manager_loop(epChans0, epAddr_Ready, c_sof, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, pwrConfig, c_usb_ctl);
 
     // Need to close, drain, and check - three stages.
     for(int i = 0; i < 2; i++)
