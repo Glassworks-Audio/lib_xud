@@ -368,7 +368,7 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                 /* Handle suspend */
                 if(!reset)
                 {
-                     // **** Disconnect ****
+                     // **** Bus down (suspend) ****
                     c_usb_ctl <: 1;
 
                    /* Run user suspend code */
@@ -385,6 +385,12 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
 
                     /* Run user resume code */
                     XUD_UserResume();
+
+                    // **** Bus up (resume) **** The host is back without
+                    // re-enumerating, so there is no SET_ADDRESS coming to say
+                    // so. A reset wake (reset==1) re-enumerates instead.
+                    if(reset == 0)
+                        c_usb_ctl <: 2;
                 }
 
                 /* Handle bus reset */
@@ -392,6 +398,13 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                 {
                     if(!sentReset)
                     {
+                        // **** Bus down (reset) **** An unplug from high speed
+                        // reads as SE0, i.e. reset, not suspend -- which of the
+                        // two a dead bus produces is timing-dependent -- and on
+                        // a bus with no host this loop re-detects reset over
+                        // and over. Both exits report bus-down; the receiver
+                        // collapses the repeats.
+                        c_usb_ctl <: 1;
                         SendBusStateToEps(epChans0_local, epAddrReady_local, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn, XUD_BUS_RESET);
                         sentReset = 1;
                     }
