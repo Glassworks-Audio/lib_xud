@@ -24,6 +24,13 @@ extern out buffered port:32 p_usb_txd;
 
 extern int resetCount;
 
+/* What the last failed high-speed handshake saw of the host, for the report
+ * XUD_HS_ONLY sends up c_usb_ctl: bit 0 set if the host answered our chirp K
+ * with a chirp K of its own, bits 4-7 the number of K-J pairs seen after it.
+ * Three pairs complete the handshake; 0 with bit 0 clear means the host (or
+ * hub) never chirped back at all. */
+unsigned g_xudHsChirp = 0;
+
 /* Assumptions:
  * - In full speed mode
  * - No flags sticky
@@ -82,6 +89,7 @@ int XUD_DeviceAttachHS(XUD_PwrConfig pwrConfig)
                     if(dp || dm)
                     {
                         /* SE0 gone, return 0 to indicate FULL SPEED */
+                        g_xudHsChirp = ((chirpCount > 0) || !detecting_k) | (chirpCount << 4);
                         return 0;
                     }
 #else

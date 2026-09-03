@@ -47,6 +47,22 @@ void XUD_PhyReset_User();
 #define HS_TX_HANDSHAKE_TIMEOUT (167)
 #define FS_TX_HANDSHAKE_TIMEOUT (5000)
 
+/* XUD_HS_ONLY: never run at full speed. A failed high-speed handshake
+ * detaches and tries again instead of enumerating as a full-speed device.
+ * For a product whose bandwidth needs high speed, a full-speed fallback is a
+ * device that appears to work and does not -- and hides a handshake fault. */
+#ifndef XUD_HS_ONLY
+#define XUD_HS_ONLY (0)
+#endif
+
+/* How long to stay detached after a failed handshake before attaching again:
+ * long enough for the host to register an unplug and start afresh */
+#define XUD_HS_RETRY_DELAY_ticks (100 * 1000 * PLATFORM_REFERENCE_MHZ)   /* 100 ms */
+
+#if XUD_HS_ONLY
+extern unsigned g_xudHsChirp;   /* what the failed handshake saw, see XUD_DeviceAttach.xc */
+#endif
+
 /* Global vars for current and desired USB speed */
 unsigned g_curSpeed;
 unsigned g_desSpeed;
@@ -464,9 +480,32 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                         }
                         else if (!tmp)
                         {
+#if XUD_HS_ONLY
+                            /* HS handshake failed, and this device does not run at
+                             * full speed. Report it, detach -- the host sees an
+                             * unplug, not a slower device -- and attach again after
+                             * a moment, so the host resets us and the handshake is
+                             * tried afresh. A persistent fault is then a device that
+                             * never enumerates and says so on every attempt, rather
+                             * than one that quietly works badly.
+                             *
+                             * On c_usb_ctl: 1 = bus down, 2 = bus up by resume, and
+                             * 3 = this, with what the device saw of the host's chirp
+                             * in bits 8-15 (see g_xudHsChirp). */
+                            c_usb_ctl <: (int)(3 | (g_xudHsChirp << 8));
+                            XUD_HAL_EnterMode_TristateDrivers();
+                            {
+                                timer t;
+                                unsigned time;
+                                t :> time;
+                                t when timerafter(time + XUD_HS_RETRY_DELAY_ticks) :> void;
+                            }
+                            continue;
+#else
                             /* HS handshake fail, mark as running in FS */
                             g_curSpeed = XUD_SPEED_FS;
                             g_txHandshakeTimeout = FS_TX_HANDSHAKE_TIMEOUT;
+#endif
                         }
                         else
                         {
