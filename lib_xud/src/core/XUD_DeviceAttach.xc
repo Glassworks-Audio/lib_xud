@@ -24,12 +24,38 @@ extern out buffered port:32 p_usb_txd;
 
 extern int resetCount;
 
-/* What the last failed high-speed handshake saw of the host, for the report
- * XUD_HS_ONLY sends up c_usb_ctl: bit 0 set if the host answered our chirp K
- * with a chirp K of its own, bits 4-7 the number of K-J pairs seen after it.
- * Three pairs complete the handshake; 0 with bit 0 clear means the host (or
- * hub) never chirped back at all. */
+/* What the last failed high-speed handshake saw, for the report XUD_Main
+ * sends up c_usb_ctl. Written where the handshake gives up.
+ *
+ * g_xudHsChirp: bit 0 the host answered our chirp K with a chirp K of its
+ *   own; bits 2-3 the flag0 / flag1 line flags were seen high while WE were
+ *   driving chirp K; bits 4-7 the K-J pairs seen after the host's K, of the
+ *   three that complete the handshake. 0 with bit 0 clear: the hub never
+ *   chirped back at all.
+ * g_xudHsFlags: bits 0-1 flag0 / flag1 just before entering chirp mode, i.e.
+ *   what the reset decision rested on (SE0 reads 00); bits 2-3 the same just
+ *   after entering chirp mode, before driving.
+ * g_xudHsHeld: from the start of our chirp K to the end of the host's SE0,
+ *   in 100 us units, capped at 255. A reset that ends within our own chirp
+ *   is a chirp that came too late.
+ * g_xudHsWait: bits 0-7 samples with flag0 high while we waited for the
+ *   host's chirp, bits 8-15 the same for flag1 (one sample every 2 us, each
+ *   capped at 255); bits 16-23 how long after XUD_Main saw the reset our
+ *   chirp began, in 100 us units. The spec wants the chirp finished within
+ *   7 ms of the reset starting. No samples while the reset ran on for
+ *   milliseconds means the hub never chirped back; plenty of them and no
+ *   pairs means it did and the detection missed it.
+ *
+ * 2026-09-03, on a unit whose high-speed front end had died: "host chirp NOT
+ * seen, 0 pairs, flags 00 / 00, no wait samples, reset ran 8.5 ms past our
+ * chirp" -- a clean reset with nothing at all on the wire. */
 unsigned g_xudHsChirp = 0;
+unsigned g_xudHsFlags = 0;
+unsigned g_xudHsHeld = 0;
+unsigned g_xudHsWait = 0;
+
+/* When XUD_Main decided the bus was in reset, on the reference timer */
+unsigned g_xudResetTime = 0;
 
 /* Assumptions:
  * - In full speed mode
@@ -45,12 +71,25 @@ int XUD_DeviceAttachHS(XUD_PwrConfig pwrConfig)
    int tx;
    unsigned int chirpCount = 0;
 
+   /* Line sampling while we wait, see g_xudHsWait */
+   unsigned tChirpStart, tSample;
+   unsigned n0 = 0, n1 = 0;
+   unsigned pre0, pre1, post0, post1;
+
    clearbuf(p_usb_txd);
+
+   /* The flags the reset decision was made on, still in full-speed mode */
+   flag0_port :> pre0;
+   flag1_port :> pre1;
 
    /* On detecting the SE0 move into chirp mode */
    XUD_HAL_EnterMode_PeripheralChirp();
+   t :> tChirpStart;
+   flag0_port :> post0;
+   flag1_port :> post1;
 
    /* output k-chirp for required time */
+   unsigned selfK = 0, selfJ = 0;
 #if defined(XUD_SIM_RTL) || (XUD_SIM_XSIM)
    for (int i = 0; i < 800; i++)
 #else
@@ -58,6 +97,17 @@ int XUD_DeviceAttachHS(XUD_PwrConfig pwrConfig)
 #endif
     {
         p_usb_txd <: 0;
+
+        /* Glance at our own chirp on the line, every 256 words (~17 us):
+         * two port reads, well inside the 32-bit port buffer's slack */
+        if((i & 0xFF) == 0x80)
+        {
+            unsigned a, b;
+            flag0_port :> a;
+            flag1_port :> b;
+            selfK |= a;
+            selfJ |= b;
+        }
     }
 
    // J, K, SE0 on flag ports 0, 1, 2 respectively (on XS2)
@@ -68,11 +118,26 @@ int XUD_DeviceAttachHS(XUD_PwrConfig pwrConfig)
 #endif
 
     t :> start_time;
+    tSample = start_time;
     while(1)
     {
         select
         {
-            case t when timerafter(start_time + INVALID_DELAY) :> void:
+            /* One timer serves both the 2 us line sampling and the give-up
+             * deadline; the deadline is checked on each tick, so it can land
+             * at most one sample late. */
+            case t when timerafter(tSample) :> void:
+
+                if((int)(tSample - (start_time + INVALID_DELAY)) < 0)
+                {
+                    unsigned a, b;
+                    tSample += 2 * PLATFORM_REFERENCE_MHZ;
+                    flag0_port :> a;
+                    flag1_port :> b;
+                    if(a) n0++;
+                    if(b) n1++;
+                    break;
+                }
 
                 /* Go into full speed mode: XcvrSelect and Term Select (and suspend) high */
                 XUD_HAL_EnterMode_PeripheralFullSpeed();
@@ -89,7 +154,16 @@ int XUD_DeviceAttachHS(XUD_PwrConfig pwrConfig)
                     if(dp || dm)
                     {
                         /* SE0 gone, return 0 to indicate FULL SPEED */
-                        g_xudHsChirp = ((chirpCount > 0) || !detecting_k) | (chirpCount << 4);
+                        unsigned now, held, late;
+                        t :> now;
+                        held = (now - tChirpStart) / (100 * PLATFORM_REFERENCE_MHZ);
+                        late = (tChirpStart - g_xudResetTime) / (100 * PLATFORM_REFERENCE_MHZ);
+                        g_xudHsChirp = ((chirpCount > 0) || !detecting_k) | ((selfK ? 1 : 0) << 2)
+                                     | ((selfJ ? 1 : 0) << 3) | (chirpCount << 4);
+                        g_xudHsFlags = (pre0 & 1) | ((pre1 & 1) << 1) | ((post0 & 1) << 2) | ((post1 & 1) << 3);
+                        g_xudHsHeld = (held > 255) ? 255 : held;
+                        g_xudHsWait = (n0 > 255 ? 255 : n0) | ((n1 > 255 ? 255 : n1) << 8)
+                                    | ((late > 255 ? 255 : late) << 16);
                         return 0;
                     }
 #else

@@ -59,8 +59,14 @@ void XUD_PhyReset_User();
  * long enough for the host to register an unplug and start afresh */
 #define XUD_HS_RETRY_DELAY_ticks (100 * 1000 * PLATFORM_REFERENCE_MHZ)   /* 100 ms */
 
-#if XUD_HS_ONLY
-extern unsigned g_xudHsChirp;   /* what the failed handshake saw, see XUD_DeviceAttach.xc */
+#if !defined(XUD_BYPASS_RESET)
+/* What a failed high-speed handshake saw, for the report sent on c_usb_ctl.
+ * See XUD_DeviceAttach.xc for the bit meanings. */
+extern unsigned g_xudHsChirp;
+extern unsigned g_xudHsFlags;
+extern unsigned g_xudHsHeld;
+extern unsigned g_xudHsWait;
+extern unsigned g_xudResetTime;
 #endif
 
 /* Global vars for current and desired USB speed */
@@ -201,6 +207,7 @@ void GetCTFromEps(XUD_chan c[], XUD_EpType epTypeTableOut[], XUD_EpType epTypeTa
 static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_local[],  chanend ?c_sof, XUD_EpType epTypeTableOut[], XUD_EpType epTypeTableIn[], int noEpOut, int noEpIn, XUD_PwrConfig pwrConfig, chanend c_usb_ctl)
 {
     int reset = 1;            /* Flag for if device is returning from a reset */
+    int fromSuspend = 0;      /* This reset came out of suspend, not straight off attach (for the XUD_HS_ONLY report) */
 
     /* Make sure ports are on and reset port states */
     set_port_use_on(p_usb_clk);
@@ -333,6 +340,8 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
         while(1)
         {
             {
+                fromSuspend = 0;
+
                 /* Wait for VBUS before enabling pull-up. The USB Spec (page 150) allows 100ms
                  * between vbus valid and signalling attach */
                 if(pwrConfig == XUD_PWR_SELF)
@@ -391,6 +400,7 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                     XUD_UserSuspend();
 
                     /* Run suspend code, returns 1 if reset from suspend, 0 for resume, -1 for invalid vbus */
+                    fromSuspend = 1;
                     reset = XUD_Suspend(pwrConfig, epChans0_local, epAddrReady_local, epTypeTableOut, epTypeTableIn, noEpOut, noEpIn);
 
                     if((pwrConfig == XUD_PWR_SELF) && (reset==-1))
@@ -412,6 +422,11 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                 /* Handle bus reset */
                 if(reset == 1)
                 {
+                    {
+                        timer tr;
+                        tr :> g_xudResetTime;
+                    }
+
                     if(!sentReset)
                     {
                         // **** Bus down (reset) **** An unplug from high speed
@@ -480,19 +495,25 @@ static int XUD_Manager_loop(XUD_chan epChans0_local[], XUD_chan epAddrReady_loca
                         }
                         else if (!tmp)
                         {
+                            /* The HS handshake failed. Say so on c_usb_ctl, whatever
+                             * happens next. The codes on that channel: 1 = bus down,
+                             * 2 = bus up by resume, 5 = what the bus did while we
+                             * waited for the host's chirp (g_xudHsWait, bits 8-31),
+                             * then 3 = the failure itself: what we saw of the host's
+                             * chirp in bits 8-15 (g_xudHsChirp, plus bit 1 = the reset
+                             * came out of suspend), the line flags around our chirp
+                             * in bits 16-23 (g_xudHsFlags) and how long the reset ran
+                             * on past our chirp in bits 24-31 (g_xudHsHeld). */
+                            c_usb_ctl <: (int)(5 | (g_xudHsWait << 8));
+                            c_usb_ctl <: (int)(3 | ((g_xudHsChirp | (fromSuspend ? 2 : 0)) << 8)
+                                                 | (g_xudHsFlags << 16) | (g_xudHsHeld << 24));
 #if XUD_HS_ONLY
-                            /* HS handshake failed, and this device does not run at
-                             * full speed. Report it, detach -- the host sees an
-                             * unplug, not a slower device -- and attach again after
-                             * a moment, so the host resets us and the handshake is
-                             * tried afresh. A persistent fault is then a device that
-                             * never enumerates and says so on every attempt, rather
-                             * than one that quietly works badly.
-                             *
-                             * On c_usb_ctl: 1 = bus down, 2 = bus up by resume, and
-                             * 3 = this, with what the device saw of the host's chirp
-                             * in bits 8-15 (see g_xudHsChirp). */
-                            c_usb_ctl <: (int)(3 | (g_xudHsChirp << 8));
+                            /* This device does not run at full speed. Detach -- the
+                             * host sees an unplug, not a slower device -- and attach
+                             * again after a moment, so the host resets us and the
+                             * handshake is tried afresh. A persistent fault is then a
+                             * device that never enumerates and says so on every
+                             * attempt, rather than one that quietly works badly. */
                             XUD_HAL_EnterMode_TristateDrivers();
                             {
                                 timer t;
